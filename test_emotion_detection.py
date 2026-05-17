@@ -1,22 +1,41 @@
-from EmotionDetection import emotion_detector
+import requests
+import json
 
-def test_emotion_detector():
+def emotion_detector(text_to_analyze):
 
-    test_cases = {
-        "I am glad this happened": "joy",
-        "I am really mad about this": "anger",
-        "I feel disgusted just hearing about this": "disgust",
-        "I am so sad about this": "sadness",
-        "I am really afraid that this will happen": "fear"
+    url = 'https://sn-watson-emotion.labs.skills.network/v1/watson.runtime.nlp.v1/NlpService/EmotionPredict'
+
+    headers = {
+        "grpc-metadata-mm-model-id":
+        "emotion_aggregated-workflow_lang_en_stock"
     }
 
-    for text, expected_emotion in test_cases.items():
+    input_json = {
+        "raw_document": {
+            "text": text_to_analyze
+        }
+    }
 
-        response = emotion_detector(text)
+    response = requests.post(url,
+                             json=input_json,
+                             headers=headers)
 
-        if response['dominant_emotion'] == expected_emotion:
-            print("Passed")
-        else:
-            print("Failed")
+    if response.status_code == 400:
+        return {
+            'anger': None,
+            'disgust': None,
+            'fear': None,
+            'joy': None,
+            'sadness': None,
+            'dominant_emotion': None
+        }
 
-test_emotion_detector()
+    formatted_response = json.loads(response.text)
+
+    emotions = formatted_response["emotionPredictions"][0]["emotion"]
+
+    dominant_emotion = max(emotions, key=emotions.get)
+
+    emotions["dominant_emotion"] = dominant_emotion
+
+    return emotions
